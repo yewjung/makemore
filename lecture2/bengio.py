@@ -103,7 +103,6 @@ def training() -> torch.Tensor:
         ix = torch.randint(0, len(Xtr), (batch_size,), generator=g)
         embed = C[Xtr[ix]]
 
-
         # forward
         h = (embed.view(-1, block_size * embed_size) @ W1 + b1).tanh()
         logits = h @ W2 + b2
@@ -136,7 +135,7 @@ print(f'{training_loss=}')
 print(f'{validation_loss=}')
 
 
-def generate():
+def generate_names():
     for _ in range(20):
         out = []
         context = [0] * block_size
