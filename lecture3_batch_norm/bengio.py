@@ -87,10 +87,10 @@ g = torch.Generator().manual_seed(2147483647)
 def training() -> torch.Tensor:
     # setup parameters
     C = torch.randn((27, embed_size),                                 generator=g)
-    W1 = torch.randn((block_size * embed_size, hidden_layer_neurons), generator=g)
-    b1 = torch.randn((hidden_layer_neurons),                          generator=g)
-    W2 = torch.randn((hidden_layer_neurons, 27),                      generator=g)
-    b2 = torch.randn((27),                                            generator=g)
+    W1 = torch.randn((block_size * embed_size, hidden_layer_neurons), generator=g) * (5/3)/(block_size * embed_size)**0.5
+    b1 = torch.randn((hidden_layer_neurons),                          generator=g) * 0.01
+    W2 = torch.randn((hidden_layer_neurons, 27),                      generator=g) * 0.01
+    b2 = torch.randn((27),                                            generator=g) * 0
     parameters = [C, W1, b1, W2, b2]
     for p in parameters:
         p.requires_grad = True
