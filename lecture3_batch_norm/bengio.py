@@ -88,7 +88,7 @@ def training() -> torch.Tensor:
     # setup parameters
     C = torch.randn((27, embed_size),                                 generator=g)
     W1 = torch.randn((block_size * embed_size, hidden_layer_neurons), generator=g) * (5/3)/(block_size * embed_size)**0.5
-    b1 = torch.randn((hidden_layer_neurons),                          generator=g) * 0.01
+    # b1 = torch.randn((hidden_layer_neurons),                          generator=g) * 0.01
     W2 = torch.randn((hidden_layer_neurons, 27),                      generator=g) * 0.01
     b2 = torch.randn((27),                                            generator=g) * 0
     bngain = torch.ones((1, hidden_layer_neurons))
@@ -97,7 +97,7 @@ def training() -> torch.Tensor:
     bnmean_running = torch.ones((1, hidden_layer_neurons))
     bnstd_running = torch.zeros((1, hidden_layer_neurons))
 
-    parameters = [C, W1, b1, W2, b2, bngain, bnbias]
+    parameters = [C, W1, W2, b2, bngain, bnbias]
     for p in parameters:
         p.requires_grad = True
     
@@ -110,7 +110,7 @@ def training() -> torch.Tensor:
         embed = C[Xtr[ix]]
 
         # forward
-        hpreact = (embed.view(-1, block_size * embed_size) @ W1 + b1)
+        hpreact = (embed.view(-1, block_size * embed_size) @ W1)
 
         # batch norm
         bnmeani = hpreact.mean(0, keepdim=True)
@@ -140,7 +140,7 @@ def training() -> torch.Tensor:
 @torch.no_grad()
 def inference(dataset: torch.Tensor, labels: torch.Tensor, bnmean: torch.Tensor, bnstd: torch.Tensor, bngain: torch.Tensor, bnbias: torch.Tensor):
     emb = C[dataset] # (32, 3, 2)
-    hpreact = emb.view(-1, block_size * embed_size) @ W1 + b1
+    hpreact = emb.view(-1, block_size * embed_size) @ W1 #+ b1
 
     # batch norm
     hpreact = (hpreact - bnmean) / bnstd
@@ -150,7 +150,7 @@ def inference(dataset: torch.Tensor, labels: torch.Tensor, bnmean: torch.Tensor,
     loss = F.cross_entropy(logits, labels)
     return loss
 
-C, W1, b1, W2, b2, bngain, bnbias, bnmean_running, bnbias_running = training()
+C, W1, W2, b2, bngain, bnbias, bnmean_running, bnbias_running = training()
 training_loss = inference(Xtr, Ytr, bnmean_running, bnbias_running, bngain, bnbias)
 validation_loss = inference(Xval, Yval, bnmean_running, bnbias_running, bngain, bnbias)
 print(f'{training_loss=}')
@@ -164,7 +164,7 @@ def generate_names():
         context = [0] * block_size
         while True:
             emb = C[torch.tensor(context)] # (32, 3, 2)
-            h = torch.tanh(emb.view(-1, block_size * embed_size) @ W1 + b1) # (32, 100)
+            h = torch.tanh(emb.view(-1, block_size * embed_size) @ W1) # (32, 100)
             logits = h @ W2 + b2 # (32, 27)
             prob = F.softmax(logits, dim=1)
             idx = torch.multinomial(prob, num_samples=1, generator=g).item()
