@@ -111,6 +111,8 @@ def training() -> torch.Tensor:
 
         # forward
         hpreact = (embed.view(-1, block_size * embed_size) @ W1 + b1)
+
+        # batch norm
         bnmeani = hpreact.mean(0, keepdim=True)
         bnstdi = hpreact.std(0, keepdim=True)
         hpreact = (hpreact - bnmeani) / bnstdi
@@ -118,6 +120,7 @@ def training() -> torch.Tensor:
         with torch.no_grad():
             bnmean_running = 0.999 * bnmean_running + 0.001 * bnmeani
             bnstd_running = 0.999 * bnstd_running + 0.001 * bnstdi
+
         h = hpreact.tanh()
         logits = h @ W2 + b2
         loss = F.cross_entropy(logits, Ytr[ix])
@@ -139,6 +142,8 @@ def training() -> torch.Tensor:
 def inference(dataset: torch.Tensor, labels: torch.Tensor, bnmean: torch.Tensor, bnstd: torch.Tensor, bngain: torch.Tensor, bnbias: torch.Tensor):
     emb = C[dataset] # (32, 3, 2)
     hpreact = emb.view(-1, block_size * embed_size) @ W1 + b1
+
+    # batch norm
     hpreact = (hpreact - bnmean) / bnstd
     hpreact = bngain * hpreact + bnbias
     h = torch.tanh(hpreact)
