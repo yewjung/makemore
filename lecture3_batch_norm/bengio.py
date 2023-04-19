@@ -91,7 +91,13 @@ def training() -> torch.Tensor:
     b1 = torch.randn((hidden_layer_neurons),                          generator=g) * 0.01
     W2 = torch.randn((hidden_layer_neurons, 27),                      generator=g) * 0.01
     b2 = torch.randn((27),                                            generator=g) * 0
-    parameters = [C, W1, b1, W2, b2]
+    bngain = torch.ones((1, hidden_layer_neurons))
+    bnbias = torch.zeros((1, hidden_layer_neurons))
+
+    bnmean_running = torch.ones((1, hidden_layer_neurons))
+    bnstd_running = torch.zeros((1, hidden_layer_neurons))
+
+    parameters = [C, W1, b1, W2, b2, bngain, bnbias]
     for p in parameters:
         p.requires_grad = True
     
@@ -104,7 +110,15 @@ def training() -> torch.Tensor:
         embed = C[Xtr[ix]]
 
         # forward
-        h = (embed.view(-1, block_size * embed_size) @ W1 + b1).tanh()
+        hpreact = (embed.view(-1, block_size * embed_size) @ W1 + b1)
+        bnmeani = hpreact.mean(0, keepdim=True)
+        bnstdi = hpreact.std(0, keepdim=True)
+        hpreact = (hpreact - bnmeani) / bnstdi
+        hpreact = bngain * hpreact + bnbias
+        with torch.no_grad():
+            bnmean_running = 0.999 * bnmean_running + 0.001 * bnmeani
+            bnstd_running = 0.999 * bnstd_running + 0.001 * bnstdi
+        h = hpreact.tanh()
         logits = h @ W2 + b2
         loss = F.cross_entropy(logits, Ytr[ix])
 
@@ -118,20 +132,23 @@ def training() -> torch.Tensor:
         for p in parameters:
             p.data += -lr * p.grad
 
-
+    parameters += [bnmean_running, bnstd_running]
     return parameters
 
 @torch.no_grad()
-def inference(dataset: torch.Tensor, labels: torch.Tensor):
+def inference(dataset: torch.Tensor, labels: torch.Tensor, bnmean: torch.Tensor, bnstd: torch.Tensor, bngain: torch.Tensor, bnbias: torch.Tensor):
     emb = C[dataset] # (32, 3, 2)
-    h = torch.tanh(emb.view(-1, block_size * embed_size) @ W1 + b1) # (32, 100)
+    hpreact = emb.view(-1, block_size * embed_size) @ W1 + b1
+    hpreact = (hpreact - bnmean) / bnstd
+    hpreact = bngain * hpreact + bnbias
+    h = torch.tanh(hpreact)
     logits = h @ W2 + b2 # (32, 27)
     loss = F.cross_entropy(logits, labels)
     return loss
 
-C, W1, b1, W2, b2 = training()
-training_loss = inference(Xtr, Ytr)
-validation_loss = inference(Xval, Yval)
+C, W1, b1, W2, b2, bngain, bnbias, bnmean_running, bnbias_running = training()
+training_loss = inference(Xtr, Ytr, bnmean_running, bnbias_running, bngain, bnbias)
+validation_loss = inference(Xval, Yval, bnmean_running, bnbias_running, bngain, bnbias)
 print(f'{training_loss=}')
 print(f'{validation_loss=}')
 
