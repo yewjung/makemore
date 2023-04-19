@@ -135,8 +135,7 @@ def training() -> torch.Tensor:
         for p in parameters:
             p.data += -lr * p.grad
 
-    parameters += [bnmean_running, bnstd_running]
-    return parameters
+    return [*parameters, bnmean_running, bnstd_running]
 
 @torch.no_grad()
 def inference(dataset: torch.Tensor, labels: torch.Tensor, bnmean: torch.Tensor, bnstd: torch.Tensor, bngain: torch.Tensor, bnbias: torch.Tensor):
