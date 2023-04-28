@@ -62,3 +62,6 @@ class BatchNormal1D:
                 self.running_var = (1 - self.momentum) * self.running_var + self.momentum * xvar
 
         return self.out
+    
+    def parameters(self):
+        return [self.gamma, self.beta]
