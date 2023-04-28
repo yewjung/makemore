@@ -145,6 +145,7 @@ def inference(dataset: torch.Tensor, labels: torch.Tensor, bnmean: torch.Tensor,
     # batch norm
     hpreact = (hpreact - bnmean) / bnstd
     hpreact = bngain * hpreact + bnbias
+    
     h = torch.tanh(hpreact)
     logits = h @ W2 + b2 # (32, 27)
     loss = F.cross_entropy(logits, labels)
