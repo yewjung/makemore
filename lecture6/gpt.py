@@ -172,12 +172,14 @@ def training(model: nn.Module, steps: int, eval_iter: int):
         # update
         optim.step()
 
-m = BigramLanguageModel2().to(device)
-training(m, 10000, 200)
+# m = BigramLanguageModel2().to(device)
+# training(m, 10000, 200)
 # saving
-filename = './model.pt'
-torch.save(m, './model.pt')
+# filename = './model.pt'
+# torch.save(m, './model.pt')
 
 # loading
-# m=torch.load('./model.pt')
-# m.eval()
+m: BigramLanguageModel2 =torch.load('./model.pt')
+m.eval()
+idx = torch.zeros((1, 1), dtype=torch.long, device=device)
+m.generate(idx, 10000)
